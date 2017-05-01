@@ -1,0 +1,82 @@
+======
+ M210
+======
+
+M210 provides tools for using Pegasus Tablet Mobile NoteTaker (M210)
+in Linux systems.
+
+Author: Tuomas Räsänen <tuomasjjrasanen@tjjr.fi>
+Homepage: <http://tjjr.fi/sw/m210/>
+
+Features
+========
+
+- Download notes in raw format (memory dump).
+- Convert raw notes to SVG images.
+- Erase notes from the device.
+- Show device information.
+
+How to install
+==============
+
+Just run the following command:
+
+  ./configure && make
+  make install
+
+It installs the library to /usr/local/lib and header files to
+/usr/local/include. See INSTALL for details.
+
+There is also a predefined udev rules file
+udev/rules.d/40-m210.rules. You can just copy that to
+/etc/udev/rules.d to allow udevd to give group ownership of plugged
+M210 devices to plugdev.
+
+How to use
+==========
+
+Download notes to a file:
+
+  m210 dump > notes
+
+Convert downloaded notes to SVG files:
+
+  m210 convert < notes
+
+Erase notes from the device's memory:
+
+  m210 delete
+
+Display device information:
+
+  m210 info
+
+How to report bugs
+==================
+
+The bug database is hosted in Launchpad. If you have found a bug or
+have an improvement idea you want to share, please report it at
+<https://bugs.launchpad.net/m210>. However, to avoid duplicate bug
+reports, before reporting, please check if similiar or identical bug
+has already been reported. If the description of the existing bug
+report If so, you can still subscribe to the existing bug to track its
+progress.
+
+If you are unsure whether the problem you have is due to a bug, you
+can ask questions at <https://answers.launchpad.net/m210>.
+
+How to contribute
+=================
+
+Source code history is controlled with Git and hosted hosted in
+GitHub. The preferred way to contibute is to clone the main repository
+and send pull-requests. Patches via email are also accepted, but do
+not use attachments; insert the patch to body of the message.
+
+How to copy
+===========
+
+M210 is licensed under the terms of GNU Public License version 3 or
+later. In short, it means that you are free to copy, modify and
+redistribute this software as long as you place the derivative work
+under a compatible license. See COPYING for details.

@@ -1,0 +1,42 @@
+README
+======
+
+Pegasus NoteTaker Linux drivers library
+=======================================
+Please read the INSTALL file if you need installation instructions.
+
+Table of contents
+=================
+
+1. Introduction
+2. Requirements
+3. Installing the library
+4. Known issues
+5. Version history
+
+1. Introduction
+===============
+This is the README file that should be read before doing anything with the library. This package contains exlusively the Linux library (see Requirements). The library is a sort of user-space drivers and, therefore, you do not need to rebuild your kernel to use it.
+The library concerns only the radio receiver part of the Pegasus NoteTaker hardware.
+
+2. Requirements
+===============
+The requirements in order to compile and run the drivers are:
+
+- Linux kernel 2.6 (x86/amd64)
+- bash, make, gcc, udev
+- libusb 1.0+ (development & binaries)
+- Java 5/6 JRE
+- ...and all the dependencies of these packages.
+
+3. Installing the library
+=========================
+Please read the INSTALL file.
+
+4. Known issues
+===============
+N/A
+
+5. Version history
+==================
+This is the version 1.0 of the drivers.

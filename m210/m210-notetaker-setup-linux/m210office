@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Launching M210 Office..."
+
+java -jar /opt/M210Office/M210_Office.jar
