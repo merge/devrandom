@@ -8,7 +8,7 @@ As long as the Xorg synaptics driver is used, edit
 the touchpad catchall entry:
 
     Option "TapButton1" "1"
-    Option "TapButton2" "2"
+    Option "TapButton2" "3"
 
 ### Two Finger scrolling
 Ok by default in Debian Stretch
