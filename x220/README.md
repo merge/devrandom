@@ -7,11 +7,15 @@ synaptics TapButton1 and TapButton2
 ## coreboot
 * config
 
-### suspend to RAM
+### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
 according to [the Debian wiki](https://wiki.debian.org/Suspend):
 
     systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+And edit the line in `/etc/systemd/logind.conf`:
+
+    HandleLidSwitch=ignore
 
 And we use pm-utils instead: `apt-get install pm-utils`
 
@@ -31,7 +35,6 @@ and the corresponding lid.sh containing
     grep -q closed /proc/acpi/button/lid/LID/state
     if [ $? = 0 ]
     then
-    	xtrlock -f -b
     	pm-suspend
     fi
 
