@@ -13,7 +13,7 @@ the touchpad catchall entry:
 ### Two Finger scrolling
 Ok by default in Debian Stretch
 
-## coreboot
+## coreboot with SeaBIOS payload
 git master from 2017-06-16. coreboot `.config` and the original Lenovo BIOS image
 should be inside of this repo too. My Machine
 includes a Winbond W25Q64.V 8MB chip. Easily flashable using a Raspberry Pi with
@@ -50,3 +50,9 @@ and the corresponding lid.sh containing
     	pm-suspend
     fi
 
+### BIOS flashing internally
+`flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
+the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
+Only tried reading. No further tests so far.
+
+This weakens security and should only be used for flashing.
