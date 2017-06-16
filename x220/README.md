@@ -1,11 +1,23 @@
-# Thinkpad X220 Setup Notes
+# Thinkpad X220 Debian Stretch Setup Notes
 
-## General Debian Setup
+## General Setup I use for different Laptops as well
 
-synaptics TapButton1 and TapButton2
+### Tap to click and TwoFinger Tap to Right click
+As long as the Xorg synaptics driver is used, edit
+`/usr/share/X11/xorg.conf.d/70-synaptics.conf` and add the following options to
+the touchpad catchall entry:
+
+    Option "TapButton1" "1"
+    Option "TapButton2" "2"
+
+### Two Finger scrolling
+Ok by default in Debian Stretch
 
 ## coreboot
-* config
+git master from 2017-06-16. coreboot `.config` and the original Lenovo BIOS image
+should be inside of this repo too. My Machine
+includes a Winbond W25Q64.V 8MB chip. Easily flashable using a Raspberry Pi with
+flashrom.
 
 ### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
