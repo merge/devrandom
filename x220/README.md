@@ -14,14 +14,13 @@ the touchpad catchall entry:
 
 # Thinkpad X220 product 42916Z9 serial R9N52CE
 * serial number from `lshw`
-* [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/flash_original_R9N52CE.bin)
+* [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/R9N52CE_orig_flash.bin)
 * Winbond W25Q64.V 8MB chip
 
 ## BIOS flashing internally
 see [the coreboot wiki for X220](https://www.coreboot.org/Board:lenovo/x220).
 `flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
 the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
-Only tried reading. No further tests so far.
 
 This weakens security and should only be used for flashing.
 
@@ -37,8 +36,8 @@ see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
  * gbe.bin
 * put the `vga-8086-0106.bin` file into coreboot's root directory
 
-### latest build
-TODO
+### latest build (June 2017)
+[download](https://github.com/merge/specs/raw/master/x220/R9N52CE_coreboot_seabios.rom)
 
 ### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
@@ -71,13 +70,7 @@ and the corresponding lid.sh containing
     	pm-suspend
     fi
 
-### display in bootloader
-TODO test vga option ROM
-
-## coreboot with GRUB payload
-
-(work in progress)
-
+## coreboot with GRUB payload (work in progress)
 Compatible with Linux only - free graphics initialisation
 
 ### building
@@ -93,9 +86,6 @@ TODO
 
 ### suspend to RAM on closing lid
 TODO (most probably the same)
-
-### display in bootloader
-OK because using coreboot framebuffer
 
 ### GRUB usage
 TODO test using only GRUB's config as-is, but from coreboot's GRUB
