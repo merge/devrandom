@@ -14,13 +14,19 @@ the touchpad catchall entry:
 Ok by default in Debian Stretch
 
 # product 42916Z9 serial R9N52CE
-see lshw
+* serial number from `lshw`
+* [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/flash_original_R9N52CE.bin)
+* Winbond W25Q64.V 8MB chip
+
+## BIOS flashing internally
+`flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
+the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
+Only tried reading. No further tests so far.
+
+This weakens security and should only be used for flashing.
 
 ## coreboot with SeaBIOS payload
-git master from 2017-06-16. coreboot `.config` and the original Lenovo BIOS image
-should be inside of this repo too. My Machine
-includes a Winbond W25Q64.V 8MB chip. Easily flashable using a Raspberry Pi with
-flashrom.
+* git master from 2017-06-16: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_seabios.config)
 
 ### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
@@ -53,9 +59,13 @@ and the corresponding lid.sh containing
     	pm-suspend
     fi
 
-### BIOS flashing internally
-`flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
-the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
-Only tried reading. No further tests so far.
+### display in bootloader
+N/A
 
-This weakens security and should only be used for flashing.
+## coreboot with GRUB payload
+* git master from 2017-XX-XX: coreboot config
+
+### suspend to RAM on closing lid
+
+### display in bootloader
+OK because coreboot framebuffer
