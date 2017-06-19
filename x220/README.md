@@ -10,15 +10,15 @@ the touchpad catchall entry:
     Option "TapButton1" "1"
     Option "TapButton2" "3"
 
-### Two Finger scrolling
-Ok by default in Debian Stretch
 
-# product 42916Z9 serial R9N52CE
+
+# Thinkpad X220 product 42916Z9 serial R9N52CE
 * serial number from `lshw`
 * [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/flash_original_R9N52CE.bin)
 * Winbond W25Q64.V 8MB chip
 
 ## BIOS flashing internally
+see [the coreboot wiki for X220](https://www.coreboot.org/Board:lenovo/x220).
 `flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
 the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
 Only tried reading. No further tests so far.
@@ -26,7 +26,19 @@ Only tried reading. No further tests so far.
 This weakens security and should only be used for flashing.
 
 ## coreboot with SeaBIOS payload
+Maximum compatibility - nonfree graphics initialisation
+
+### building
+see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
 * git master from 2017-06-16: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_seabios.config)
+* put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
+ * descriptor.bin
+ * me.bin
+ * gbe.bin
+* put the `vga-8086-0106.bin` file into coreboot's root directory
+
+### latest build
+TODO
 
 ### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
@@ -60,12 +72,36 @@ and the corresponding lid.sh containing
     fi
 
 ### display in bootloader
-N/A
+TODO test vga option ROM
 
 ## coreboot with GRUB payload
-* git master from 2017-XX-XX: coreboot config
+
+(work in progress)
+
+Compatible with Linux only - free graphics initialisation
+
+### building
+see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
+* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_grub.config)
+* put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
+ * descriptor.bin
+ * me.bin
+ * gbe.bin
+
+### latest build
+TODO
 
 ### suspend to RAM on closing lid
+TODO (most probably the same)
 
 ### display in bootloader
-OK because coreboot framebuffer
+OK because using coreboot framebuffer
+
+### GRUB usage
+TODO test using only GRUB's config as-is, but from coreboot's GRUB
+
+#### install Debian without grub (?)
+TODO
+
+* how to update grub config (installing a new kernel)
+* hard-coded paths where grub.cfg has to reside
