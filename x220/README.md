@@ -13,6 +13,9 @@ the touchpad catchall entry:
 ### Two Finger scrolling
 Ok by default in Debian Stretch
 
+# product 42916Z9 serial R9N52CE
+see lshw
+
 ## coreboot with SeaBIOS payload
 git master from 2017-06-16. coreboot `.config` and the original Lenovo BIOS image
 should be inside of this repo too. My Machine
