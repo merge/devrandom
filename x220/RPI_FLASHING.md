@@ -3,17 +3,17 @@
 * RPi with UART cable
 * Pomona SOIC8 5250 Clip + fem. jumper wires
 
-	   Edge of pi (furthest from you)
-	 L                                                             CS
-	 E                                                             |
-	 F +--------------------------------------------------------------------------------------------------------+
-	 T |    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    |
-	   |    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    |
-	 E +--------------------------------------------^----^----^----^---------------------------------------^----+
-	 D                                              |    |    |    |                                       |
-	 G                                             3.3V  MOSI MISO |                                      GND
-	 E                                           (VCC)            CLK
-	   Body of Pi (closest to you)
+		   Edge of pi (furthest from you)
+		 L                                                             CS
+		 E                                                             |
+		 F +--------------------------------------------------------------------------------------------------------+
+		 T |    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    |
+		   |    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    x    |
+		 E +--------------------------------------------^----^----^----^---------------------------------------^----+
+		 D                                              |    |    |    |                                       |
+		 G                                             3.3V  MOSI MISO |                                      GND
+		 E                                           (VCC)            CLK
+		   Body of Pi (closest to you)
 
 ## RPi 3 Setup
 * `enable_uart=1` and `dtparam=spi=on` in /boot/config.txt
