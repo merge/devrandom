@@ -24,6 +24,8 @@ the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it perm
 
 This weakens security and should only be used for flashing.
 
+For more on flashing, see [RPI_FLASHING.md](RPI_FLASHING.md).
+
 ## coreboot with SeaBIOS payload
 Maximum compatibility - nonfree graphics initialisation
 
