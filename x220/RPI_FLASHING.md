@@ -32,6 +32,9 @@
 
 	   Edge (closest to you)
 
+## X230
+should be the same. verify with the datasheet if you have problems.
+
 ## Flashing X220
 Check connection by reading 2 times and comparing
 
@@ -45,6 +48,8 @@ While coreboot is already running and having `iomem=relaxed` on the kernel comma
 
 
 ## Flashing X230
+Some things taken from [https://www.coreboot.org/Board:lenovo/x230](https://www.coreboot.org/Board:lenovo/x230):
+
 There are 2 ICs. The bios and thus coreboot resides in the 4MB one.
 Read it 2 times as usual, check that they match. If the file is 8M,
 you're flashing wrong chip, connect to the 4MB one.
@@ -52,20 +57,22 @@ you're flashing wrong chip, connect to the 4MB one.
 For coreboot we only need to flash the top 4M.
 
      dd of=top.rom bs=1M if=build/coreboot.rom skip=8
-
-from [https://www.coreboot.org/Board:lenovo/x230](https://www.coreboot.org/Board:lenovo/x230):
+     flashrom -p linux_spi:dev=/dev/spidev0.0 -w top.rom
 
 
 You can flash both two chips. Now we swith to the 8MB one. What we do is
-* run me_cleaner
+* run `me_cleaner.py`
 * unlock to enable internal flashing
+
 
      flashrom -p linux_spi:dev=/dev/spidev0.0 -r ifdmegbe.rom
      ifdtool -x ifdmegbe.rom
      ./me_cleaner.py flashregion_2_intel_me.bin
      ifdtool -i ME:./flashregion_2_intel_me.bin ifdmegbe.rom
-     ifdtool -u ifdmegbe.rom
+     ifdtool -u ifdmegbe.rom.new
+     mv ifdmegbe.rom.new ifdmegbe.rom
      flashrom -p linux_spi:dev=/dev/spidev0.0 -w ifdmegbe.rom
+
 
 ### internally
 To only update coreboot, we create a layout file, `x230-layout.txt`:
