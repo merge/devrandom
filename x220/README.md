@@ -77,7 +77,7 @@ Compatible with Linux only - free graphics initialisation
 
 ### building
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
-* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_grub.config)
+* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/R9N52CE_coreboot_grub.config)
 * put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
  * descriptor.bin
  * me.bin
@@ -97,3 +97,33 @@ TODO
 
 * how to update grub config (installing a new kernel)
 * hard-coded paths where grub.cfg has to reside
+
+
+
+
+# Thinkpad X230 Debian Stretch Setup Notes
+TODO
+
+# Thinkpad X230 product TODO serial TODO
+* [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/XXXX_orig_flash.bin)
+
+## BIOS flashing internally
+TODO test
+
+For more on flashing, see [RPI_FLASHING.md](RPI_FLASHING.md).
+
+## coreboot with SeaBIOS payload
+Maximum compatibility - nonfree graphics initialisation
+
+### building
+see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
+* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/XXXX_coreboot_seabios.config)
+* put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x230` as
+ * descriptor.bin
+ * me.bin
+ * gbe.bin
+* put the `vga-8086-0106.bin` (TODO) file into coreboot's root directory
+
+### latest build (TODO 2017)
+[download](https://github.com/merge/specs/raw/master/x220/XXXX_coreboot_seabios.rom)
+
