@@ -35,16 +35,21 @@
 ## X230
 should be the same. verify with the datasheet if you have problems.
 
+
 ## Flashing X220
+Some things taken from [https://www.coreboot.org/Board:lenovo/x220](https://www.coreboot.org/Board:lenovo/x220):
+
 Check connection by reading 2 times and comparing
 
+     sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash01.bin
+
 ### externally
-`sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash01.bin`
+     sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -w coreboot.rom
 
 ### internally
-While coreboot is already running and having `iomem=relaxed` on the kernel commandline.
+While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
 
-`flashrom -p internal:laptop=force_I_want_a_brick <-r/-w> file.rom`
+     flashrom -p internal:laptop=force_I_want_a_brick -w coreboot.rom
 
 
 ## Flashing X230
@@ -52,29 +57,32 @@ Some things taken from [https://www.coreboot.org/Board:lenovo/x230](https://www.
 
 There are 2 ICs. The bios and thus coreboot resides in the 4MB one.
 Read it 2 times as usual, check that they match. If the file is 8M,
-you're flashing wrong chip, connect to the 4MB one.
+you're flashing wrong chip, connect to the 4 MB one. In case flashrom
+needs you to select a chip, here's some data I came accross:
 
-For coreboot we only need to flash the top 4M.
+* model: XXX / serial: XXX / 4 MB chip: MX25L3206E (8 MB chip: EN25QH64)
+
+Coreboot creates a 12 MB image but the BIOS is in the 4 MB chip and we only
+need to flash the top 4M for coreboot.
 
      dd of=top.rom bs=1M if=build/coreboot.rom skip=8
      flashrom -p linux_spi:dev=/dev/spidev0.0 -w top.rom
 
-
-You can flash both two chips. Now we swith to the 8MB one. What we do is
-* run `me_cleaner.py`
-* unlock to enable internal flashing
-
+Now we swith to the 8 MB one. This is where the Intel Management Engine firmware
+resides. We remove it using `me_cleaner` and unlock the image descriptor in
+order to be able to flash internally from now on.
 
      flashrom -p linux_spi:dev=/dev/spidev0.0 -r ifdmegbe.rom
-     ifdtool -x ifdmegbe.rom
-     ./me_cleaner.py flashregion_2_intel_me.bin
-     ifdtool -i ME:./flashregion_2_intel_me.bin ifdmegbe.rom
-     ifdtool -u ifdmegbe.rom.new
-     mv ifdmegbe.rom.new ifdmegbe.rom
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -w ifdmegbe.rom
+     ./me_cleaner.py -O ifdmegbe_meclean.rom ifdmegbe.rom
+     ifdtool -u ifdmegbe_meclean.rom
+     flashrom -p linux_spi:dev=/dev/spidev0.0 -w ifdmegbe_meclean.rom.new
 
 
 ### internally
+TODO test
+
+While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
+
 To only update coreboot, we create a layout file, `x230-layout.txt`:
 
      0x00000000:0x007fffff ifdmegbe
@@ -83,8 +91,5 @@ To only update coreboot, we create a layout file, `x230-layout.txt`:
 we create the 4MB coreboot bios file like we did before:
 
      dd of=top.rom bs=1M if=build/coreboot.rom skip=8
-
-and flash it:
-
      flashrom -p internal --layout x230-layout.txt --image bios build/coreboot.rom
 

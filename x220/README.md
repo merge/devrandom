@@ -18,13 +18,10 @@ the touchpad catchall entry:
 * Winbond W25Q64.V 8MB chip
 
 ## BIOS flashing internally
-see [the coreboot wiki for X220](https://www.coreboot.org/Board:lenovo/x220).
-`flashrom -p internal:laptop=force_I_want_a_brick` works, when Linux is started with
-the `iomem=relaxed` commandline option. Put it /etc/default/grub to have it permanently.
+Start Linux with the `iomem=relaxed` commandline option. Put it /etc/default/grub
+to have it permanently. This weakens security and should only be used for flashing.
 
-This weakens security and should only be used for flashing.
-
-For more on flashing, see [RPI_FLASHING.md](RPI_FLASHING.md).
+     flashrom -p internal:laptop=force_I_want_a_brick -w coreboot.rom
 
 ## coreboot with SeaBIOS payload
 Maximum compatibility - nonfree graphics initialisation
@@ -72,7 +69,7 @@ and the corresponding lid.sh containing
     	pm-suspend
     fi
 
-## coreboot with GRUB payload (work in progress)
+## coreboot with GRUB payload (work not yet in progress)
 Compatible with Linux only - free graphics initialisation
 
 ### building
@@ -102,15 +99,13 @@ TODO
 
 
 # Thinkpad X230 Debian Stretch Setup Notes
-TODO
 
 # Thinkpad X230 product TODO serial TODO
-* [Lenovo BIOS image](https://github.com/merge/specs/raw/master/x220/XXXX_orig_flash.bin)
+* [Lenovo BIOS image 4MB](https://github.com/merge/specs/raw/master/x220/X230_4MB_bios_orig_flash.bin)
+* [Lenovo BIOS image 8MB](https://github.com/merge/specs/raw/master/x220/X230_8MB_ifdmegbe_orig_flash.bin)
 
 ## BIOS flashing internally
 TODO test
-
-For more on flashing, see [RPI_FLASHING.md](RPI_FLASHING.md).
 
 ## coreboot with SeaBIOS payload
 Maximum compatibility - nonfree graphics initialisation
