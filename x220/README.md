@@ -1,5 +1,3 @@
-# Thinkpad X220 Debian Stretch Setup Notes
-
 ## General Setup I use for different Laptops as well
 
 ### Tap to click and TwoFinger Tap to Right click
@@ -16,6 +14,8 @@ in `/etc/default/grub` add
 
      GRUB_CMDLINE_LINUX="i915.enable_fbc=0 iomem=relaxed"
      GRUB_DISABLE_SUBMENU=y
+
+
 
 
 # Thinkpad X220 product 42916Z9 serial R9N52CE
@@ -104,27 +104,28 @@ TODO
 
 
 
-# Thinkpad X230 Debian Stretch Setup Notes
 
-# Thinkpad X230 product TODO serial TODO
-* [Lenovo BIOS image 4MB](https://github.com/merge/specs/raw/master/x220/X230_4MB_bios_orig_flash.bin)
-* [Lenovo BIOS image 8MB](https://github.com/merge/specs/raw/master/x220/X230_8MB_ifdmegbe_orig_flash.bin)
+
+# Thinkpad X230 product 2325TRN serial R9XAPP7
+* [Lenovo BIOS image 4MB](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_4MB_bios_orig_flash.bin)
+* [Lenovo BIOS image 8MB](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_8MB_ifdmegbe_orig_flash.bin)
 
 ## BIOS flashing internally
-TODO test
+Start Linux with the `iomem=relaxed` commandline option. Put it /etc/default/grub
+to have it permanently. This weakens security and should only be used for flashing.
+
+Here you need the 12 MB file created by coreboot's build:
+
+     flashrom -p internal --layout x230-layout.txt --image bios -w coreboot.rom
 
 ## coreboot with SeaBIOS payload
 Maximum compatibility - nonfree graphics initialisation
 
 ### building
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
-* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/XXXX_coreboot_seabios.config)
-* put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x230` as
- * descriptor.bin
- * me.bin
- * gbe.bin
-* put the `vga-8086-0106.bin` (TODO) file into coreboot's root directory
+* git master from 2017-06-16: [coreboot config](https://github.com/merge/specs/blob/master/x220/X230_R9XAPP7_coreboot_seabios.config)
+* put the `pci8086,0166.rom` file into coreboot's root directory
 
-### latest build (TODO 2017)
-[download](https://github.com/merge/specs/raw/master/x220/XXXX_coreboot_seabios.rom)
+### latest build
+[download](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_coreboot_seabios.rom)
 
