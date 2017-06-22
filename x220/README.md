@@ -11,6 +11,12 @@ the touchpad catchall entry:
     Option "TapButton2" "3"
 
 
+### GRUB kernels list and settings
+in `/etc/default/grub` add
+
+     GRUB_CMDLINE_LINUX="i915.enable_fbc=0 iomem=relaxed"
+     GRUB_DISABLE_SUBMENU=y
+
 
 # Thinkpad X220 product 42916Z9 serial R9N52CE
 * serial number from `lshw`
