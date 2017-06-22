@@ -1,4 +1,11 @@
 
+## RPi 3 Setup
+* `enable_uart=1` and `dtparam=spi=on` in /boot/config.txt
+* `spi_bcm2835` and `spidev` in /etc/modules
+* Wifi data in /etc/wpa_supplicant/wpa_supplicant.conf
+* install `libftdi1 libftdi-dev libusb-dev libpci-dev subversion build-essential pciutils usbutils zlib1g-dev`
+* `svn co svn://flashrom.org/flashrom/trunk flashrom` build and install
+
 ## Hardware
 * RPi with UART cable
 * Pomona SOIC8 5250 Clip + fem. jumper wires
@@ -15,14 +22,7 @@
 		 E                                           (VCC)            CLK
 		   Body of Pi (closest to you)
 
-## RPi 3 Setup
-* `enable_uart=1` and `dtparam=spi=on` in /boot/config.txt
-* `spi_bcm2835` and `spidev` in /etc/modules
-* Wifi data in /etc/wpa_supplicant/wpa_supplicant.conf
-* install `libftdi1 libftdi-dev libusb-dev libpci-dev subversion build-essential pciutils usbutils zlib1g-dev`
-* `svn co svn://flashrom.org/flashrom/trunk flashrom` build and install
-
-## X220
+#### X220
 	Screen (furthest from you)
 		     __
 	  MOSI  5 --|  |-- 4  GND
@@ -32,8 +32,18 @@
 
 	   Edge (closest to you)
 
-## X230
+#### X230
 should be the same. verify with the datasheet if you have problems.
+
+
+## extracting VGA BIOS option ROM
+Use [UEFITool](https://github.com/LongSoft/UEFITool), open the image, Search for
+text "VGA Compatible BIOS" (uncheck unicode)
+
+Double clicking the matching line in the "Messages" section should select the
+appropriate RAW section. From the menu select "Action -> Section -> Extract Body...".
+
+run fcode-utils' `romheaders` on it to check the IDs.
 
 
 ## Flashing X220
