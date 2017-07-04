@@ -89,8 +89,6 @@ order to be able to flash internally from now on.
 
 
 ### internally
-TODO test
-
 While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
 
 To only update coreboot, we create a layout file, `x230-layout.txt`:
@@ -98,8 +96,7 @@ To only update coreboot, we create a layout file, `x230-layout.txt`:
      0x00000000:0x007fffff ifdmegbe
      0x00800000:0x00bfffff bios
 
-we create the 4MB coreboot bios file like we did before:
+and can use a 12MiB coreboot image to only write the bios part:
 
-     dd of=top.rom bs=1M if=build/coreboot.rom skip=8
      flashrom -p internal --layout x230-layout.txt --image bios build/coreboot.rom
 
