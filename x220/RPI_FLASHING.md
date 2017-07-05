@@ -22,7 +22,7 @@
 		 E                                           (VCC)            CLK
 		   Body of Pi (closest to you)
 
-#### X220
+#### X220 / X230
 	Screen (furthest from you)
 		     __
 	  MOSI  5 --|  |-- 4  GND
@@ -31,9 +31,6 @@
 	   VCC  8 --|__|-- 1  CS
 
 	   Edge (closest to you)
-
-#### X230
-should be the same. verify with the datasheet if you have problems.
 
 
 ## extracting VGA BIOS option ROM
@@ -49,11 +46,11 @@ run fcode-utils' `romheaders` on it to check the IDs.
 ## Flashing X220
 Some things taken from [https://www.coreboot.org/Board:lenovo/x220](https://www.coreboot.org/Board:lenovo/x220):
 
+### externally
 Check connection by reading 2 times and comparing
 
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash01.bin
 
-### externally
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -w coreboot.rom
 
 ### internally
@@ -65,6 +62,7 @@ While coreboot is already running and having `iomem=relaxed` on the kernel comma
 ## Flashing X230
 Some things taken from [https://www.coreboot.org/Board:lenovo/x230](https://www.coreboot.org/Board:lenovo/x230):
 
+### externally
 There are 2 ICs. The bios and thus coreboot resides in the 4MB one.
 Read it 2 times as usual, check that they match. If the file is 8M,
 you're flashing wrong chip, connect to the 4 MB one. In case flashrom

@@ -30,9 +30,7 @@ to have it permanently. This weakens security and should only be used for flashi
      flashrom -p internal:laptop=force_I_want_a_brick -w coreboot.rom
 
 ## coreboot with SeaBIOS payload
-Maximum compatibility - nonfree graphics initialisation
 
-### building
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
 * git master from 2017-06-16: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_seabios.config)
 * put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
@@ -40,9 +38,7 @@ see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
  * me.bin
  * gbe.bin
 * put the `vga-8086-0106.bin` file into coreboot's root directory
-
-### latest build (June 2017)
-[download](https://github.com/merge/specs/raw/master/x220/R9N52CE_coreboot_seabios.rom)
+* [download](https://github.com/merge/specs/raw/master/x220/R9N52CE_coreboot_seabios.rom) a working image
 
 ### suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
@@ -75,32 +71,6 @@ and the corresponding lid.sh containing
     	pm-suspend
     fi
 
-## coreboot with GRUB payload (work not yet in progress)
-Compatible with Linux only - free graphics initialisation
-
-### building
-see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
-* git master from 2017-XX-XX: [coreboot config](https://github.com/merge/specs/blob/master/x220/R9N52CE_coreboot_grub.config)
-* put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
- * descriptor.bin
- * me.bin
- * gbe.bin
-
-### latest build
-TODO
-
-### suspend to RAM on closing lid
-TODO (most probably the same)
-
-### GRUB usage
-TODO test using only GRUB's config as-is, but from coreboot's GRUB
-
-#### install Debian without grub (?)
-TODO
-
-* how to update grub config (installing a new kernel)
-* hard-coded paths where grub.cfg has to reside
-
 
 
 
@@ -111,14 +81,12 @@ TODO
 * [Lenovo BIOS image 8MB](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_8MB_ifdmegbe_orig_flash.bin)
 
 ## BIOS flashing internally
-see [RPI_FLASHING.md](RPI_FLASHING.md).
+works, see [RPI_FLASHING.md](RPI_FLASHING.md).
 
 ## coreboot with SeaBIOS payload
 
-### building
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
+* put the extracted video bios binary in coreboot's top level directory
 * git master from 2017-07-04: [coreboot config](https://github.com/merge/specs/blob/master/x220/X230_R9XAPP7_coreboot_seabios.config)
-
-### latest build
-[download](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_coreboot_seabios.rom)
+* [download](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_coreboot_seabios.rom) a working image
 
