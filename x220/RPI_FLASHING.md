@@ -80,10 +80,10 @@ Now we swith to the 8 MB one. This is where the Intel Management Engine firmware
 resides. We remove it using `me_cleaner` and unlock the image descriptor in
 order to be able to flash internally from now on.
 
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -r ifdmegbe.rom
+     flashrom -p linux_spi:dev=/dev/spidev0.0 -c "MX25L3206E/MX25L3208E" -r ifdmegbe.rom
      ./me_cleaner.py -O ifdmegbe_meclean.rom ifdmegbe.rom
      ifdtool -u ifdmegbe_meclean.rom
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -w ifdmegbe_meclean.rom.new
+     flashrom -p linux_spi:dev=/dev/spidev0.0 -c "MX25L3206E/MX25L3208E" -w ifdmegbe_meclean.rom.new
 
 
 ### internally
