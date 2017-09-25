@@ -7,7 +7,7 @@ feature. Since we build tor's latest release manually and upgrade and monitor
 our relay's system more or less manually, we need access to it at all times
 anyways. If we lose access, the relay goes down automatically.
 
-### generate `ed25519_master_id_secret_key`
+### generate encrypted `ed25519_master_id_secret_key`
 Let's use a relatively new Debian system, without non-free.
 
 * `tor --SigningKeyLifetime '3 months' --keygen --DataDirectory </path/to/save>`
@@ -37,3 +37,23 @@ if `secret_id_key` is generated during tor startup, it can be ignored.
 
 ### check expiration date
 tor --key-expiration
+
+## exit relay config
+
+		ExitPolicy reject *:25
+		ExitPolicy accept *:*
+		ExitRelay 1
+		IPv6Exit 1
+
+
+## general relay config
+
+		ORPort XXX
+		ORPort [ipv6]:XXX
+		Nickname XXX
+		RleayBandwidthRate...
+		RleayBandwidthBurst...
+		RunAsDaemon 1
+		AvoidDiskWrites 1
+		DirPort XX
+		DisPortFrontPage...
