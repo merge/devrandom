@@ -1,8 +1,10 @@
 # rsync backup solution
+This is a backup solution for a large, remote directory tree.
 * maximum compression - obvious
 * incremental backup using hardlinks: `--link-dest` pointing to the last backup
 * Recognize renamings: The second `--fuzzy` option should compare a source file
-to all of `--link-dest`.
+to all of `--link-dest`. `--delete-delay` or `--delete-after` is needed when
+using `--fuzzy`.
 
 		source_ssh=<see ssh config>
 		source_dir=<dir at ssh source>
