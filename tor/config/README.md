@@ -36,9 +36,18 @@ if `secret_id_key` is generated during tor startup, it can be ignored.
 * Restarting or reloading Tor after renewing the keys is *not* required.
 
 ### check expiration date
-tor --key-expiration
+* Does `tor --key-expiration sign` exit or start tor?
+* python script to run on the cert is available
 
 ## exit relay config
+This will not describe everything we do in preparation for running an exit relay.
+Just some thoughts:
+* whois
+* abuse mail forwarding
+* open relay, no closed ports
+* reverse dns
+
+### torrc
 
 		ExitPolicy reject *:25
 		ExitPolicy accept *:*
@@ -47,6 +56,9 @@ tor --key-expiration
 
 
 ## general relay config
+This is what we want to consider for any relay we run.
+
+### torrc
 
 		ORPort XXX
 		ORPort [ipv6]:XXX
