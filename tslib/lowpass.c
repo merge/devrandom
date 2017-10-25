@@ -1,4 +1,6 @@
 /*
+ * Courtesy of Openmoko, 2011
+ *
  * This file is placed under the LGPL.  Please see the file
  * COPYING for more details.
  * 
@@ -22,8 +24,6 @@ struct tslib_lowpass {
 	unsigned char threshold;
 #define VAR_PENUP		0x00000001
 };
-
-
 
 static int lowpass_read(struct tslib_module_info *info, struct ts_sample *samp, int nr)
 {
@@ -128,7 +128,6 @@ static int lowpass_threshold(struct tslib_module_info *inf, char *str,
 	return 0;
 }
 
-
 static const struct tslib_vars lowpass_vars[] =
 {
 	{ "factor",	(void *)1, lowpass_factor },
@@ -137,7 +136,7 @@ static const struct tslib_vars lowpass_vars[] =
 
 #define NR_VARS (sizeof(lowpass_vars) / sizeof(lowpass_vars[0]))
 
-TSAPI struct tslib_module_info *mod_init(struct tsdev *dev, const char *params)
+TSAPI struct tslib_module_info *lowpass_mod_init(struct tsdev *dev, const char *params)
 {
 	struct tslib_lowpass *var;
 
@@ -160,3 +159,7 @@ TSAPI struct tslib_module_info *mod_init(struct tsdev *dev, const char *params)
 
 	return &var->module;
 }
+
+#ifndef TSLIB_STATIC_LOWPASS_MODULE
+	TSLIB_MODULE_INIT(lowpass_mod_init);
+#endif
