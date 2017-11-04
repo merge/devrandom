@@ -1,0 +1,682 @@
+From 797d48e181da824da77c87390d9d6d30791716af Mon Sep 17 00:00:00 2001
+From: Josef Holzmayr <holzmayr@rsi-elektrotechnik.de>
+Date: Fri, 22 Sep 2017 13:13:24 +0200
+Subject: [PATCH] Q'n'D: use DRM instead of FB
+
+---
+ configure.ac      |  10 +
+ tests/Makefile.am |   6 +
+ tests/drmutils.c  | 620 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 636 insertions(+)
+ create mode 100644 tests/drmutils.c
+
+diff --git a/configure.ac b/configure.ac
+index 8a2bae8..24e411e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -178,6 +178,16 @@ AS_IF([test "x$with_sdl2" = "xyes"], [
+   AC_CHECK_LIB([SDL2], [SDL_Init], [], [exit 1])
+ ])
+ 
++AC_ARG_WITH(drm,
++  [AS_HELP_STRING([--with-drm], [build ts_calibrate using drm])],
++  [with_drm=$withval],
++  [with_drm=no])
++
++AM_CONDITIONAL(DRM, test x"$with_drm" = "xyes")
++AS_IF([test "x$with_drm" = "xyes"], [
++  PKG_CHECK_MODULES([libdrm], [libdrm >= 2.4.54], [], [exit 1])
++])
++
+ # libts Library versioning
+ # increment if the interface changed
+ LT_CURRENT=8
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index f2c3a6d..e6618cb 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -85,9 +85,15 @@ ts_calibrate_LDADD	= $(top_builddir)/src/libts.la
+ if FREEBSD
+ ts_calibrate_SOURCES	+= fbutils-bsd.c
+ else
++if DRM
++ts_calibrate_SOURCES	+= drmutils.c
++ts_calibrate_CFLAGS		= $(AM_CFLAGS) @libdrm_CFLAGS@
++ts_calibrate_LDADD		+= @libdrm_LIBS@
++else
+ ts_calibrate_SOURCES	+= fbutils-linux.c
+ endif
+ endif
++endif
+ 
+ ts_harvest_SOURCES	= ts_harvest.c fbutils.h testutils.c testutils.h font_8x8.c font_8x16.c font.h
+ ts_harvest_LDADD	= $(top_builddir)/src/libts.la
+diff --git a/tests/drmutils.c b/tests/drmutils.c
+new file mode 100644
+index 0000000..31770c7
+--- /dev/null
++++ b/tests/drmutils.c
+@@ -0,0 +1,620 @@
++/*
++ * drmutils.c
++ *
++ * Utility routines for framebuffer interaction
++ *
++ * Copyright 2017 Josef Holzmayr
++ *
++ * This file is placed under the GPL.  Please see the
++ * file COPYING for details.
++ *
++ */
++
++#include "config.h"
++
++#include <errno.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <sys/ioctl.h>
++#include <sys/mman.h>
++#include <sys/time.h>
++#include <fcntl.h>
++
++#include <libdrm/drm.h>
++#include <xf86drm.h>
++#include <xf86drmMode.h>
++
++
++#include "font.h"
++#include "fbutils.h"
++
++uint32_t xres, yres;
++int8_t rotation;
++
++static int fd = 0;
++static uint32_t colormap[256];
++static char *defaultdrmdevice = "/dev/dri/card0";
++static int32_t bytes_per_pixel;
++static uint32_t transp_mask = 0xFF000000;
++
++union multiptr {
++	uint8_t *p8;
++	uint16_t *p16;
++	uint32_t *p32;
++};
++
++struct modeset_dev {
++	struct modeset_dev *next;
++
++	uint32_t width;
++	uint32_t height;
++	uint32_t stride;
++	uint32_t size;
++	uint32_t handle;
++	uint8_t *map;
++
++	drmModeModeInfo mode;
++	uint32_t fb;
++	uint32_t conn;
++	uint32_t crtc;
++	drmModeCrtc *saved_crtc;
++};
++static struct modeset_dev *modeset_list = NULL;
++
++static int modeset_open(int *out, const char *node)
++{
++	int fd, ret;
++	uint64_t has_dumb;
++
++	fd = open(node, O_RDWR | O_CLOEXEC);
++	if (fd < 0) {
++		ret = -errno;
++		fprintf(stderr, "cannot open '%s': %m\n", node);
++		return ret;
++	}
++
++	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 ||
++	    !has_dumb) {
++		fprintf(stderr, "drm device '%s' does not support dumb buffers\n",
++			node);
++		close(fd);
++		return -EOPNOTSUPP;
++	}
++
++	*out = fd;
++	return 0;
++}
++
++static int modeset_create_fb(int fd, struct modeset_dev *dev)
++{
++	struct drm_mode_create_dumb creq;
++	struct drm_mode_destroy_dumb dreq;
++	struct drm_mode_map_dumb mreq;
++	int ret;
++
++	/* create dumb buffer */
++	memset(&creq, 0, sizeof(creq));
++	creq.width = dev->width;
++	creq.height = dev->height;
++	creq.bpp = 32;
++	ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
++	if (ret < 0) {
++		fprintf(stderr, "cannot create dumb buffer (%d): %m\n",
++			errno);
++		return -errno;
++	}
++	dev->stride = creq.pitch;
++	dev->size = creq.size;
++	dev->handle = creq.handle;
++
++	/* create framebuffer object for the dumb-buffer */
++	ret = drmModeAddFB(fd, dev->width, dev->height, 24, 32, dev->stride,
++			   dev->handle, &dev->fb);
++	if (ret) {
++		fprintf(stderr, "cannot create framebuffer (%d): %m\n",
++			errno);
++		ret = -errno;
++		goto err_destroy;
++	}
++
++	/* prepare buffer for memory mapping */
++	memset(&mreq, 0, sizeof(mreq));
++	mreq.handle = dev->handle;
++	ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
++	if (ret) {
++		fprintf(stderr, "cannot map dumb buffer (%d): %m\n",
++			errno);
++		ret = -errno;
++		goto err_fb;
++	}
++
++	/* perform actual memory mapping */
++	dev->map = mmap(0, dev->size, PROT_READ | PROT_WRITE, MAP_SHARED,
++		        fd, mreq.offset);
++	if (dev->map == MAP_FAILED) {
++		fprintf(stderr, "cannot mmap dumb buffer (%d): %m\n",
++			errno);
++		ret = -errno;
++		goto err_fb;
++	}
++
++	/* clear the framebuffer to 0 */
++	memset(dev->map, 0, dev->size);
++
++	return 0;
++
++err_fb:
++	drmModeRmFB(fd, dev->fb);
++err_destroy:
++	memset(&dreq, 0, sizeof(dreq));
++	dreq.handle = dev->handle;
++	drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
++	return ret;
++}
++
++static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
++			     struct modeset_dev *dev)
++{
++	drmModeEncoder *enc;
++	int i, j;
++	int32_t crtc;
++	struct modeset_dev *iter;
++
++	/* first try the currently conected encoder+crtc */
++	if (conn->encoder_id)
++		enc = drmModeGetEncoder(fd, conn->encoder_id);
++	else
++		enc = NULL;
++
++	if (enc) {
++		if (enc->crtc_id) {
++			crtc = enc->crtc_id;
++
++			if (crtc >= 0) {
++				drmModeFreeEncoder(enc);
++				dev->crtc = crtc;
++				return 0;
++			}
++		}
++
++		drmModeFreeEncoder(enc);
++	}
++
++	/* If the connector is not currently bound to an encoder or if the
++	 * encoder+crtc is already used by another connector (actually unlikely
++	 * but lets be safe), iterate all other available encoders to find a
++	 * matching CRTC. */
++	for (i = 0; i < conn->count_encoders; ++i) {
++		enc = drmModeGetEncoder(fd, conn->encoders[i]);
++		if (!enc) {
++			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
++				i, conn->encoders[i], errno);
++			continue;
++		}
++
++		/* iterate all global CRTCs */
++		for (j = 0; j < res->count_crtcs; ++j) {
++			/* check whether this CRTC works with the encoder */
++			if (!(enc->possible_crtcs & (1 << j)))
++				continue;
++
++			/* we have found a CRTC, so save it and return */
++			if (crtc >= 0) {
++				drmModeFreeEncoder(enc);
++				dev->crtc = crtc;
++				return 0;
++			}
++		}
++
++		drmModeFreeEncoder(enc);
++	}
++
++	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
++		conn->connector_id);
++	return -ENOENT;
++}
++
++static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
++			     struct modeset_dev *dev)
++{
++	int ret;
++
++	/* check if a monitor is connected */
++	if (conn->connection != DRM_MODE_CONNECTED) {
++		fprintf(stderr, "ignoring unused connector %u\n",
++			conn->connector_id);
++		return -ENOENT;
++	}
++
++	/* check if there is at least one valid mode */
++	if (conn->count_modes == 0) {
++		fprintf(stderr, "no valid mode for connector %u\n",
++			conn->connector_id);
++		return -EFAULT;
++	}
++
++	/* copy the mode information into our device structure */
++	memcpy(&dev->mode, &conn->modes[0], sizeof(dev->mode));
++	dev->width = conn->modes[0].hdisplay;
++	dev->height = conn->modes[0].vdisplay;
++	fprintf(stderr, "mode for connector %u is %ux%u\n",
++		conn->connector_id, dev->width, dev->height);
++
++	/* find a crtc for this connector */
++	ret = modeset_find_crtc(fd, res, conn, dev);
++	if (ret) {
++		fprintf(stderr, "no valid crtc for connector %u\n",
++			conn->connector_id);
++		return ret;
++	}
++
++	/* create a framebuffer for this CRTC */
++	ret = modeset_create_fb(fd, dev);
++	if (ret) {
++		fprintf(stderr, "cannot create framebuffer for connector %u\n",
++			conn->connector_id);
++		return ret;
++	}
++
++	return 0;
++}
++
++static int modeset_prepare(int fd)
++{
++	drmModeRes *res;
++	drmModeConnector *conn;
++	struct modeset_dev *dev;
++	int ret;
++
++	/* retrieve resources */
++	res = drmModeGetResources(fd);
++	if (!res) {
++		fprintf(stderr, "cannot retrieve DRM resources (%d): %m\n",
++			errno);
++		return -errno;
++	}
++
++	/* prepare connector */
++	if (res->count_connectors > 0)
++	{
++		/* get information for each connector */
++		conn = drmModeGetConnector(fd, res->connectors[0]);
++		if (!conn) {
++			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
++				0, res->connectors[0], errno);
++		}
++
++		/* create a device structure */
++		dev = malloc(sizeof(*dev));
++		memset(dev, 0, sizeof(*dev));
++		dev->conn = conn->connector_id;
++
++		/* call helper function to prepare this connector */
++		ret = modeset_setup_dev(fd, res, conn, dev);
++		if (ret) {
++			if (ret != -ENOENT) {
++				errno = -ret;
++				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
++					0, res->connectors[0], errno);
++			}
++			free(dev);
++			drmModeFreeConnector(conn);
++		}
++
++		/* free connector data and link device into global list */
++		drmModeFreeConnector(conn);
++		modeset_list = dev;
++
++		if (res->count_connectors > 1)
++			fprintf(stderr, "more than one connector detected, ignoring the leftovers\n");
++	}
++
++	/* free resources again */
++	drmModeFreeResources(res);
++	return 0;
++}
++
++int open_framebuffer(void)
++{
++	int ret;
++	const char *card;
++
++	if ((card = getenv ("TSLIB_FBDEVICE")) == NULL)
++		card = defaultdrmdevice;
++
++	fprintf(stderr, "using card '%s'\n", card);
++
++	/* open the DRM device */
++	ret = modeset_open(&fd, card);
++	if (ret)
++		goto out_return;
++
++	/* prepare all connectors and CRTCs */
++	ret = modeset_prepare(fd);
++	if (ret)
++		goto out_close;
++
++	/* perform actual modesetting on found connector+CRTC */
++	if (modeset_list)
++	{
++		modeset_list->saved_crtc = drmModeGetCrtc(fd, modeset_list->crtc);
++		ret = drmModeSetCrtc(fd, modeset_list->crtc, modeset_list->fb, 0, 0,
++				     &modeset_list->conn, 1, &modeset_list->mode);
++		if (ret)
++			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
++					modeset_list->conn, errno);
++	}
++
++	xres = modeset_list->width;
++	yres = modeset_list->height;
++	rotation = 0;
++	/*
++	 * so far we always request 32bpp
++	 */
++	bytes_per_pixel = 4;
++
++	return 0;
++
++out_close:
++	close(fd);
++out_return:
++	if (ret) {
++		errno = -ret;
++		fprintf(stderr, "modeset failed with error %d: %m\n", errno);
++	} else {
++		fprintf(stderr, "exiting\n");
++	}
++	return ret;
++}
++
++void close_framebuffer(void)
++{
++	struct modeset_dev *iter;
++	struct drm_mode_destroy_dumb dreq;
++
++	if (modeset_list) {
++		/* remove from global list */
++		iter = modeset_list;
++		modeset_list = NULL;
++
++		/* restore saved CRTC configuration */
++		drmModeSetCrtc(fd,
++			       iter->saved_crtc->crtc_id,
++			       iter->saved_crtc->buffer_id,
++			       iter->saved_crtc->x,
++			       iter->saved_crtc->y,
++			       &iter->conn,
++			       1,
++			       &iter->saved_crtc->mode);
++		drmModeFreeCrtc(iter->saved_crtc);
++
++		/* unmap buffer */
++		munmap(iter->map, iter->size);
++
++		/* delete framebuffer */
++		drmModeRmFB(fd, iter->fb);
++
++		/* delete dumb buffer */
++		memset(&dreq, 0, sizeof(dreq));
++		dreq.handle = iter->handle;
++		drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
++
++		/* free allocated memory */
++		free(iter);
++	}
++
++	xres = 0;
++	yres = 0;
++	rotation = 0;
++}
++
++void put_cross(int32_t x, int32_t y, uint32_t colidx)
++{
++	line (x - 10, y, x - 2, y, colidx);
++	line (x + 2, y, x + 10, y, colidx);
++	line (x, y - 10, x, y - 2, colidx);
++	line (x, y + 2, x, y + 10, colidx);
++
++#if 1
++	line (x - 6, y - 9, x - 9, y - 9, colidx + 1);
++	line (x - 9, y - 8, x - 9, y - 6, colidx + 1);
++	line (x - 9, y + 6, x - 9, y + 9, colidx + 1);
++	line (x - 8, y + 9, x - 6, y + 9, colidx + 1);
++	line (x + 6, y + 9, x + 9, y + 9, colidx + 1);
++	line (x + 9, y + 8, x + 9, y + 6, colidx + 1);
++	line (x + 9, y - 6, x + 9, y - 9, colidx + 1);
++	line (x + 8, y - 9, x + 6, y - 9, colidx + 1);
++#else
++	line (x - 7, y - 7, x - 4, y - 4, colidx + 1);
++	line (x - 7, y + 7, x - 4, y + 4, colidx + 1);
++	line (x + 4, y - 4, x + 7, y - 7, colidx + 1);
++	line (x + 4, y + 4, x + 7, y + 7, colidx + 1);
++#endif
++}
++
++static void put_char(int32_t x, int32_t y, int32_t c, int32_t colidx)
++{
++	int32_t i,j,bits;
++
++	for (i = 0; i < font_vga_8x8.height; i++) {
++		bits = font_vga_8x8.data [font_vga_8x8.height * c + i];
++		for (j = 0; j < font_vga_8x8.width; j++, bits <<= 1)
++			if (bits & 0x80)
++				pixel (x + j, y + i, colidx);
++	}
++}
++
++void put_string(int32_t x, int32_t y, char *s, uint32_t colidx)
++{
++	int32_t i;
++	for (i = 0; *s; i++, x += font_vga_8x8.width, s++)
++		put_char (x, y, *s, colidx);
++}
++
++void put_string_center(int32_t x, int32_t y, char *s, uint32_t colidx)
++{
++	size_t sl = strlen (s);
++        put_string (x - (sl / 2) * font_vga_8x8.width,
++                    y - font_vga_8x8.height / 2, s, colidx);
++}
++
++void setcolor(uint32_t colidx, uint32_t value)
++{
++	if (colidx > 255) {
++#ifdef DEBUG
++		fprintf (stderr, "WARNING: color index = %u, must be <256\n",
++			 colidx);
++#endif
++		return;
++	}
++	colormap [colidx] = value;
++}
++
++static void __pixel_loc(int32_t x, int32_t y, union multiptr *loc)
++{
++	switch (rotation) {
++	case 0:
++	default:
++		loc->p8 = &modeset_list->map[y * modeset_list->stride + x * bytes_per_pixel];
++		break;
++	}
++}
++
++static inline void __setpixel (union multiptr loc, uint32_t xormode, uint32_t color)
++{
++	switch(bytes_per_pixel) {
++	default:
++	case 4:
++		if (xormode)
++			*loc.p32 ^= color;
++		else
++			*loc.p32 = color;
++		*loc.p32 |= transp_mask;
++		break;
++	}
++}
++
++void pixel (int32_t x, int32_t y, uint32_t colidx)
++{
++	uint32_t xormode;
++	union multiptr loc;
++
++	if ((x < 0) || ((uint32_t)x >= xres) ||
++	    (y < 0) || ((uint32_t)y >= yres))
++		return;
++
++	xormode = colidx & XORMODE;
++	colidx &= ~XORMODE;
++
++	if (colidx > 255) {
++#ifdef DEBUG
++		fprintf (stderr, "WARNING: color value = %u, must be <256\n",
++			 colidx);
++#endif
++		return;
++	}
++
++	__pixel_loc(x, y, &loc);
++	__setpixel (loc, xormode, colormap [colidx]);
++}
++
++void line (int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t colidx)
++{
++	int32_t tmp;
++	int32_t dx = x2 - x1;
++	int32_t dy = y2 - y1;
++
++	if (abs (dx) < abs (dy)) {
++		if (y1 > y2) {
++			tmp = x1; x1 = x2; x2 = tmp;
++			tmp = y1; y1 = y2; y2 = tmp;
++			dx = -dx; dy = -dy;
++		}
++		x1 <<= 16;
++		/* dy is apriori >0 */
++		dx = (dx << 16) / dy;
++		while (y1 <= y2) {
++			pixel (x1 >> 16, y1, colidx);
++			x1 += dx;
++			y1++;
++		}
++	} else {
++		if (x1 > x2) {
++			tmp = x1; x1 = x2; x2 = tmp;
++			tmp = y1; y1 = y2; y2 = tmp;
++			dx = -dx; dy = -dy;
++		}
++		y1 <<= 16;
++		dy = dx ? (dy << 16) / dx : 0;
++		while (x1 <= x2) {
++			pixel (x1, y1 >> 16, colidx);
++			y1 += dy;
++			x1++;
++		}
++	}
++}
++
++void rect (int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t colidx)
++{
++	line (x1, y1, x2, y1, colidx);
++	line (x2, y1+1, x2, y2-1, colidx);
++	line (x2, y2, x1, y2, colidx);
++	line (x1, y2-1, x1, y1+1, colidx);
++}
++
++void fillrect (int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t colidx)
++{
++	int32_t tmp;
++	uint32_t xormode;
++	union multiptr loc;
++
++	/* Clipping and sanity checking */
++	if (x1 > x2) { tmp = x1; x1 = x2; x2 = tmp; }
++	if (y1 > y2) { tmp = y1; y1 = y2; y2 = tmp; }
++
++	if (x1 < 0)
++		x1 = 0;
++	if ((uint32_t)x1 >= xres)
++		x1 = xres - 1;
++
++	if (x2 < 0)
++		x2 = 0;
++	if ((uint32_t)x2 >= xres)
++		x2 = xres - 1;
++
++	if (y1 < 0)
++		y1 = 0;
++	if ((uint32_t)y1 >= yres)
++		y1 = yres - 1;
++
++	if (y2 < 0)
++		y2 = 0;
++	if ((uint32_t)y2 >= yres)
++		y2 = yres - 1;
++
++	if ((x1 > x2) || (y1 > y2))
++		return;
++
++	xormode = colidx & XORMODE;
++	colidx &= ~XORMODE;
++
++	if (colidx > 255) {
++#ifdef DEBUG
++		fprintf (stderr, "WARNING: color value = %u, must be <256\n",
++			 colidx);
++#endif
++		return;
++	}
++
++	colidx = colormap [colidx];
++
++	for (; y1 <= y2; y1++) {
++		for (tmp = x1; tmp <= x2; tmp++) {
++			__pixel_loc(tmp, y1, &loc);
++			__setpixel(loc, xormode, colidx);
++			loc.p8 += bytes_per_pixel;
++		}
++	}
++}
+-- 
+2.11.0
+
