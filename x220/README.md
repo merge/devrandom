@@ -1,5 +1,14 @@
 ## General Setup I use for different Laptops as well
 
+| Keys | Function |
+| --- | --- |
+| Enter | Startup Interrupt Menu |
+| ESC | to Resume normal startup |
+| F1 | to Enter the BIOS Setup Utility |
+| F10 | to diagnose hardware |
+| F11 | to recover your system |
+| F12 | Boot menu |
+
 ### Tap to click and TwoFinger Tap to Right click
 As long as the Xorg synaptics driver is used, edit
 `/usr/share/X11/xorg.conf.d/70-synaptics.conf` and add the following options to
