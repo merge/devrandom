@@ -50,6 +50,9 @@ Some things taken from [https://www.coreboot.org/Board:lenovo/x220](https://www.
 Check connection by reading 2 times and comparing
 
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash01.bin
+     sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash02.bin
+
+and after building a coreboot image, write:
 
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -w coreboot.rom
 
@@ -70,20 +73,26 @@ needs you to select a chip, here's some data I came accross:
 
 * model: XXX / serial: XXX / 4 MB chip: MX25L3206E (8 MB chip: EN25QH64)
 
+Read the 4MB flash image twice and compare:
+
+     flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -r top01.rom
+     flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -r top02.rom
+
+Extract the UEFI VGA Option ROM and build a coreboot image.
 Coreboot creates a 12 MB image but the BIOS is in the 4 MB chip and we only
 need to flash the top 4M for coreboot.
 
      dd of=top.rom bs=1M if=build/coreboot.rom skip=8
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -w top.rom
+     flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -w top.rom
 
 Now we swith to the 8 MB one. This is where the Intel Management Engine firmware
 resides. We remove it using `me_cleaner` and unlock the image descriptor in
 order to be able to flash internally from now on.
 
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -c "MX25L3206E/MX25L3208E" -r ifdmegbe.rom
+     flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -c "MX25L3206E/MX25L3208E" -r ifdmegbe.rom
      ./me_cleaner.py -O ifdmegbe_meclean.rom ifdmegbe.rom
      ifdtool -u ifdmegbe_meclean.rom
-     flashrom -p linux_spi:dev=/dev/spidev0.0 -c "MX25L3206E/MX25L3208E" -w ifdmegbe_meclean.rom.new
+     flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -c "MX25L3206E/MX25L3208E" -w ifdmegbe_meclean.rom.new
 
 
 ### internally
