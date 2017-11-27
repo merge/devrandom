@@ -46,26 +46,22 @@ run fcode-utils' `romheaders` on it to check the IDs.
 ## Flashing X220
 Some things taken from [https://www.coreboot.org/Board:lenovo/x220](https://www.coreboot.org/Board:lenovo/x220):
 
-### externally
 Check connection by reading 2 times and comparing
 
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash01.bin
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -r flash02.bin
 
-and after building a coreboot image, write:
+For building coreboot, besides the VGA Option ROM, we need the extracted
+`descriptor.bin`, `me.bin` and `gbe.bin` in
+`3rdparty/blobs/mainboard/lenovo/x220`. after building a coreboot
+image, write:
 
      sudo flashrom -p linux_spi:dev=/dev/spidev0.0 -w coreboot.rom
-
-### internally
-While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
-
-     flashrom -p internal:laptop=force_I_want_a_brick -w coreboot.rom
 
 
 ## Flashing X230
 Some things taken from [https://www.coreboot.org/Board:lenovo/x230](https://www.coreboot.org/Board:lenovo/x230):
 
-### externally
 There are 2 ICs. The bios and thus coreboot resides in the 4MB one.
 Read it 2 times as usual, check that they match. If the file is 8M,
 you're flashing wrong chip, connect to the 4 MB one. In case flashrom
@@ -78,7 +74,8 @@ Read the 4MB flash image twice and compare:
      flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -r top01.rom
      flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -r top02.rom
 
-Extract the UEFI VGA Option ROM and build a coreboot image.
+Extract the UEFI VGA Option ROM and build a coreboot image. Fake IFD...
+without bte, me or descriptor binaries can be built.
 Coreboot creates a 12 MB image but the BIOS is in the 4 MB chip and we only
 need to flash the top 4M for coreboot.
 
@@ -93,17 +90,3 @@ order to be able to flash internally from now on.
      ./me_cleaner.py -O ifdmegbe_meclean.rom ifdmegbe.rom
      ifdtool -u ifdmegbe_meclean.rom
      flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=128 -c "MX25L3206E/MX25L3208E" -w ifdmegbe_meclean.rom.new
-
-
-### internally
-While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
-
-To only update coreboot, we create a layout file, `x230-layout.txt`:
-
-     0x00000000:0x007fffff ifdmegbe
-     0x00800000:0x00bfffff bios
-
-and can use a 12MiB coreboot image to only write the bios part:
-
-     flashrom -p internal --layout x230-layout.txt --image bios build/coreboot.rom
-

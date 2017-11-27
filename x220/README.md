@@ -41,15 +41,14 @@ to have it permanently. This weakens security and should only be used for flashi
 ## coreboot with SeaBIOS payload
 
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
-* git master from 2017-06-16: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_seabios.config)
+* git master from 2017-11-27: [coreboot config](https://github.com/merge/specs/blob/master/x220/coreboot_R9N52CE_seabios.config)
 * put the 3 flashregions into `3rdparty/blobs/mainboard/lenovo/x220` as
  * descriptor.bin
  * me.bin
  * gbe.bin
-* put the `vga-8086-0106.bin` file into coreboot's root directory
-* [download](https://github.com/merge/specs/raw/master/x220/R9N52CE_coreboot_seabios.rom) a working image
+* put the `pci8086,0106.rom` file into coreboot's root directory
 
-### suspend to RAM on closing lid
+### Debian 9: suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
 according to [the Debian wiki](https://wiki.debian.org/Suspend):
 
@@ -85,17 +84,25 @@ and the corresponding lid.sh containing
 
 
 
-# Thinkpad X230 product 2325TRN serial R9XAPP7
-* [Lenovo BIOS image 4MB](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_4MB_bios_orig_flash.bin)
-* [Lenovo BIOS image 8MB](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_8MB_ifdmegbe_orig_flash.bin)
+# Thinkpad X230
+Building coreboot can be done with fake IFD... No binaries except for the VGA Option ROM
+needed. We only flash the lower 4MB after all.
 
 ## BIOS flashing internally
-works, see [RPI_FLASHING.md](RPI_FLASHING.md).
+While coreboot is already running and having `iomem=relaxed` on the kernel commandline:
+
+To only update coreboot, we create a layout file, `x230-layout.txt`:
+
+     0x00000000:0x007fffff ifdmegbe
+     0x00800000:0x00bfffff bios
+
+and can use a 12MiB coreboot image to only write the bios part:
+
+     flashrom -p internal --layout x230-layout.txt --image bios build/coreboot.rom
+
 
 ## coreboot with SeaBIOS payload
 
 see [the coreboot wiki](https://www.coreboot.org/Build_HOWTO)
+* latest test [coreboot config](X230_NEW_coreboot_seabios.config)
 * put the extracted video bios binary in coreboot's top level directory
-* git master from 2017-07-04: [coreboot config](https://github.com/merge/specs/blob/master/x220/X230_R9XAPP7_coreboot_seabios.config)
-* [download](https://github.com/merge/specs/raw/master/x220/X230_R9XAPP7_coreboot_seabios.rom) a working image
-
