@@ -25,6 +25,10 @@ in `/etc/default/grub` add
      GRUB_DISABLE_SUBMENU=y
 
 
+### SATA power management
+have `SATA_MOBILE_LPM_POLICY` configured `3` and make sure
+`link_power_management_policy` in libata sysfs reads `med_power_with_dipm`
+
 
 
 # Thinkpad X220 product 42916Z9 serial R9N52CE
