@@ -30,6 +30,9 @@ have `SATA_MOBILE_LPM_POLICY` configured `3` and make sure
 `link_power_management_policy` in libata sysfs `/sys/class/scsi_host/host*/`
 reads `med_power_with_dipm`
 
+### optional power saving
+* BT_HCIBTUSB_AUTOSUSPEND
+* SND_HDA_POWER_DAVE_DEFAULT 1
 
 
 # Thinkpad X220 product 42916Z9 serial R9N52CE
