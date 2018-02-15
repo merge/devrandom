@@ -27,7 +27,8 @@ in `/etc/default/grub` add
 
 ### SATA power management
 have `SATA_MOBILE_LPM_POLICY` configured `3` and make sure
-`link_power_management_policy` in libata sysfs reads `med_power_with_dipm`
+`link_power_management_policy` in libata sysfs `/sys/class/scsi_host/host*/`
+reads `med_power_with_dipm`
 
 
 
