@@ -7,15 +7,14 @@ all connections - for example to use Tor Browser.
 
 We have to whitelist about 2000 ip:port combinations and drop everything else.
 
+https://github.com/rustybird/corridor does something similar, but still runs
+Tor. Also it's not router (wifi) config.
+
 ### consensus source
 We need to hourly fetch a consesus file. Do we have to use a Network Authority?
 See https://consensus-health.torproject.org/
 
 ### iptables and ipset
-Untested.
-
-
-
 This uses a consensus file, parses for servers with Guard flag, refactors
 for `ipset` and runs `ipset add` on each server in the list:
 
@@ -26,17 +25,20 @@ for `ipset` and runs `ipset add` on each server in the list:
 
 To enable it:
 
-TODO
-
 
 		iptables -A INPUT -m set ! --match-set guardset src -j DROP
 
 
 ### hourly update
-https://wiki.gentoo.org/wiki/IPSet
+Procedure: https://wiki.gentoo.org/wiki/IPSet
+
+Guards are quite stable, maybe update less frequently?
 
 ### OpenWRT network
 We want to apply iptables to the wifi...
+
+### Wifi Portal for downloading Tor Browser
+TODO whitelist torproject.org ?
 
 ### Hardware
 What constraints do we have here?
