@@ -1,0 +1,7 @@
+Buildinfo: v1-229-ged6ea6-dirty (20180514) patched.x230.img
+Built: c49c8d9b4b6fd14621f3e59cea04f113f9cee86e  x230.G2HT35WW.s01D3000.FL2
+
+Patches applied:
+x230.G2HT35WW.img.d/006_battery_validate.patch
+
+Description: x230 BIOS 2.72 (G2ETB2WW) EC 1.14 (G2HT35WW)
