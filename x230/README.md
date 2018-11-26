@@ -36,6 +36,11 @@ reads `med_power_with_dipm`
 * SND_HDA_POWER_DAVE_DEFAULT 1
 
 
+### Heads setup
+* mount-usb (load usb drivers)
+* gpg --card-edit --homedir .gnupg/
+TODO
+
 ### X220 Debian 9: suspend to RAM on closing lid
 Ideally systemd's defaults would just work. For me they don't, so we disable them
 according to [the Debian wiki](https://wiki.debian.org/Suspend):
