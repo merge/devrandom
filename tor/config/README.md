@@ -37,8 +37,7 @@ if `secret_id_key` is generated during tor startup, it can be ignored.
 * done. restarting or reloading Tor after renewing the keys is *not* required.
 
 ### check expiration date
-* Does `tor --key-expiration sign` exit or start tor?
-* python script to run on the cert is available
+* `tor --key-expiration sign`
 
 ## exit relay config
 This will not describe everything we do in preparation for running an exit relay.
