@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ ! -f ~/backupconfig.sh ]; then
 	echo "config file not found!"
 	exit 0
