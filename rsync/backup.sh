@@ -2,6 +2,8 @@
 
 set -e
 
+# TODO get config file from argument
+
 if [ ! -f ~/backupconfig.sh ]; then
 	echo "config file not found!"
 	exit 0
@@ -27,6 +29,8 @@ rsync -aR \
  --exclude=".Private" \
  --exclude=".ecryptfs" \
  --exclude=".cache" \
+ --exclude=".local/share" \
+ --exclude=".nobackup" \
  --exclude=".mozilla" \
  --exclude="tor-browser_en-US" \
  --ignore-missing-args \

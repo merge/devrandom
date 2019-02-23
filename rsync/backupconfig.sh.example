@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO list of ignored directories
+
 source_ssh=ssh_config
 source_dir=/home/remote_user_to_backup/
 
