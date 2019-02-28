@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 # TODO get config file from argument
 
 if [ ! -f ~/backupconfig.sh ]; then
@@ -37,6 +35,11 @@ rsync -aR \
  -e ssh ${source_ssh}:${source_dir} ${archive_name}-${date_started} \
  --link-dest="${dest_dir}/${archive_name}-last"
 
-sync
-ln -nsf ${archive_name}-${date_started} ${archive_name}-last
-echo -e "${GREEN}latest backup is now ${archive_name}-${date_started}${NC}"
+if [ "$?" -eq "0" ] ; then
+	sync
+	ln -nsf ${archive_name}-${date_started} ${archive_name}-last
+	echo -e "${GREEN}Success.${NC} latest backup is now ${archive_name}-${date_started}"
+else
+	echo -e "${RED}Error${NC} while running rsync. resetting back..."
+	rm -rf ${archive_name}-${date_started}
+fi
