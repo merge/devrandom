@@ -18,10 +18,14 @@ the touchpad catchall entry:
     Option "TapButton2" "3"
 
 
+### BFQ block scheduler
+* `IOSCHED_BFQ=y`
+* check via `cat /sys/block/sda/queue/scheduler`
+
 ### GRUB kernels list and settings
 in `/etc/default/grub` add
 
-     GRUB_CMDLINE_LINUX="iomem=relaxed fsck.repair=yes"
+     GRUB_CMDLINE_LINUX="iomem=relaxed fsck.repair=yes scsi_mod.use_blk_mq=1"
      GRUB_DISABLE_SUBMENU=y
      GRUB_RECORDFAIL_TIMEOUT=1
 
@@ -32,8 +36,8 @@ have `SATA_MOBILE_LPM_POLICY` configured `3` and make sure
 reads `med_power_with_dipm`
 
 ### optional power saving
-* BT_HCIBTUSB_AUTOSUSPEND
-* SND_HDA_POWER_DAVE_DEFAULT 1
+* `BT_HCIBTUSB_AUTOSUSPEND`
+* `SND_HDA_POWER_SAVE_DEFAULT 1`
 
 
 ### Heads setup
