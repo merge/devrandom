@@ -29,13 +29,7 @@ rsync -aR \
  --fuzzy \
  --verbose --human-readable --info=progress2 \
  --compress --compress-level=9 \
- --exclude=".Private" \
- --exclude=".ecryptfs" \
- --exclude=".cache" \
- --exclude=".local/share" \
- --exclude=".nobackup" \
- --exclude=".mozilla" \
- --exclude="tor-browser_en-US" \
+ --exclude-from="${EXCLUDE_LIST}" \
  --ignore-missing-args \
  -e ssh ${source_ssh}:${source_dir} ${archive_name}-${date_started} \
  --link-dest="${dest_dir}/${archive_name}-last"
