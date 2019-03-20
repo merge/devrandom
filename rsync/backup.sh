@@ -40,6 +40,7 @@ rsync -aR \
  -e ssh ${source_ssh}:${source_dir} ${archive_name}-${date_started} \
  --link-dest="${dest_dir}/${archive_name}-last"
 
+date
 if [ "$?" -eq "0" ] ; then
 	sync
 	ln -nsf ${archive_name}-${date_started} ${archive_name}-last
