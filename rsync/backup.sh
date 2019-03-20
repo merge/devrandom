@@ -16,7 +16,12 @@ NC='\033[0m' # No Color
 
 date_started=$(date +%Y-%m-%d)
 
-cd ${dest_dir}
+if [ -d "${dest_dir}" ] ; then
+	cd ${dest_dir}
+else
+	echo "destination directory not found!"
+	exit 0
+fi
 
 rsync -aR \
  --delete-after \
