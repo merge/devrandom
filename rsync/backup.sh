@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0+
 # Copyright (C) 2019, Martin Kepplinger <martink@posteo.de>
 
+# TODO resume instead of reset
+
 have_config_file=0
 
 args=$(getopt -o c: -- "$@")
