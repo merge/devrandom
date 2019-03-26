@@ -30,7 +30,7 @@ do
 done
 
 if [ "$have_config_file" -gt 0 ] ; then
-	echo "Using configuration ${CONFIG_FILE} with exlude list ${EXCLUDE_LIST}"
+	echo "Using configuration ${CONFIG_FILE}"
 else
 	echo "Please add -c <configfile>"
 	exit 1
@@ -57,6 +57,13 @@ else
 	exit 0
 fi
 
+function trap_exit()
+{
+	echo -e "${RED}Error${NC} while running rsync. resetting back..."
+	rm -rf ${archive_name}-${date_started}
+}
+trap "trap_exit" EXIT
+
 rsync -aR \
  --delete-after \
  --fuzzy \
@@ -74,6 +81,5 @@ if [ "$?" -eq "0" ] ; then
 	ln -nsf ${archive_name}-${date_started} ${archive_name}-last
 	echo -e "${GREEN}Success.${NC} latest backup is now ${archive_name}-${date_started}"
 else
-	echo -e "${RED}Error${NC} while running rsync. resetting back..."
-	rm -rf ${archive_name}-${date_started}
+	trap_exit
 fi
