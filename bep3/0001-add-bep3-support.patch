@@ -1,0 +1,465 @@
+From 8825222513d059ba0fb8ac9e3f71c1a8c69e5570 Mon Sep 17 00:00:00 2001
+From: Martin Kepplinger <martin.kepplinger@ginzinger.com>
+Date: Tue, 19 Feb 2019 10:31:53 +0100
+Subject: [NOSIG][NODISC][PATCH] add bep3 support
+
+---
+ arch/arm/mach-imx/mx6/Kconfig |  11 +++
+ board/ginzinger/bep3/Kconfig  |  12 +++
+ board/ginzinger/bep3/Makefile |   1 +
+ board/ginzinger/bep3/bep3.c   | 174 ++++++++++++++++++++++++++++++++++
+ board/ginzinger/bep3/bep3.cfg | 120 +++++++++++++++++++++++
+ configs/bep3_defconfig        |  34 +++++++
+ include/configs/bep3.h        |  35 +++++++
+ 7 files changed, 387 insertions(+)
+ create mode 100644 board/ginzinger/bep3/Kconfig
+ create mode 100644 board/ginzinger/bep3/Makefile
+ create mode 100644 board/ginzinger/bep3/bep3.c
+ create mode 100644 board/ginzinger/bep3/bep3.cfg
+ create mode 100644 configs/bep3_defconfig
+ create mode 100644 include/configs/bep3.h
+
+diff --git a/arch/arm/mach-imx/mx6/Kconfig b/arch/arm/mach-imx/mx6/Kconfig
+index e782859b1e..12fef3e7aa 100644
+--- a/arch/arm/mach-imx/mx6/Kconfig
++++ b/arch/arm/mach-imx/mx6/Kconfig
+@@ -126,6 +126,16 @@ config TARGET_ARISTAINETOS2B
+ 	bool "Support aristainetos2-revB"
+ 	select BOARD_LATE_INIT
+ 
++config TARGET_BEP3
++	bool "bep3"
++	select BOARD_EARLY_INIT_F
++	select BOARD_LATE_INIT
++	select DM
++	select DM_THERMAL
++	select MX6S
++	select SUPPORT_SPL
++	imply CMD_DM
++
+ config TARGET_CGTQMX6EVAL
+ 	bool "cgtqmx6eval"
+ 	select BOARD_LATE_INIT
+@@ -562,6 +572,7 @@ source "board/freescale/mx6sxsabresd/Kconfig"
+ source "board/freescale/mx6sxsabreauto/Kconfig"
+ source "board/freescale/mx6ul_14x14_evk/Kconfig"
+ source "board/freescale/mx6ullevk/Kconfig"
++source "board/ginzinger/bep3/Kconfig"
+ source "board/grinn/liteboard/Kconfig"
+ source "board/phytec/pcm058/Kconfig"
+ source "board/phytec/pfla02/Kconfig"
+diff --git a/board/ginzinger/bep3/Kconfig b/board/ginzinger/bep3/Kconfig
+new file mode 100644
+index 0000000000..e684828d90
+--- /dev/null
++++ b/board/ginzinger/bep3/Kconfig
+@@ -0,0 +1,12 @@
++if TARGET_BEP3
++
++config SYS_BOARD
++	default "bep3"
++
++config SYS_VENDOR
++	default "ginzinger"
++
++config SYS_CONFIG_NAME
++	default "bep3"
++
++endif
+diff --git a/board/ginzinger/bep3/Makefile b/board/ginzinger/bep3/Makefile
+new file mode 100644
+index 0000000000..c2c1c48288
+--- /dev/null
++++ b/board/ginzinger/bep3/Makefile
+@@ -0,0 +1 @@
++obj-y  := bep3.o
+diff --git a/board/ginzinger/bep3/bep3.c b/board/ginzinger/bep3/bep3.c
+new file mode 100644
+index 0000000000..8aa52cb966
+--- /dev/null
++++ b/board/ginzinger/bep3/bep3.c
+@@ -0,0 +1,174 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Copyright (C) 2019 Martin Kepplinger <martink@posteo.de>
++ */
++
++#include <asm/arch/clock.h>
++#include <asm/arch/imx-regs.h>
++#include <asm/arch/iomux.h>
++#include <asm/arch/mx6-pins.h>
++#include <malloc.h>
++#include <linux/errno.h>
++#include <asm/gpio.h>
++#include <asm/mach-imx/iomux-v3.h>
++#include <asm/mach-imx/sata.h>
++#include <mmc.h>
++#include <fsl_esdhc.h>
++#include <asm/arch/crm_regs.h>
++#include <asm/io.h>
++#include <asm/arch/sys_proto.h>
++#include <micrel.h>
++#include <miiphy.h>
++#include <netdev.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++int dram_init(void)
++{
++	gd->ram_size = imx_ddr_size();
++
++	return 0;
++}
++
++#define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_SRE_FAST  | PAD_CTL_HYS |			\
++	PAD_CTL_PUE | PAD_CTL_PKE)
++
++static iomux_v3_cfg_t const uart2_pads[] = {
++	MX6_PAD_SD4_DAT7__UART2_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
++	MX6_PAD_SD4_DAT4__UART2_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
++};
++
++static void setup_iomux_uart(void)
++{
++	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
++}
++
++#ifdef CONFIG_NAND_MXS
++
++#define NAND_PAD_CTRL	(PAD_CTL_SPEED_MED |	\
++	PAD_CTL_DSE_48ohm | PAD_CTL_HYS |	\
++	PAD_CTL_SRE_FAST)
++
++static iomux_v3_cfg_t const nand_pads[] = {
++	MX6_PAD_NANDF_CLE__NAND_CLE     | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_ALE__NAND_ALE     | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_CS0__NAND_CE0_B   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_RB0__NAND_READY_B | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D0__NAND_DATA00   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D1__NAND_DATA01   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D2__NAND_DATA02   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D3__NAND_DATA03   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D4__NAND_DATA04   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D5__NAND_DATA05   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D6__NAND_DATA06   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_D7__NAND_DATA07   | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_SD4_CMD__NAND_RE_B      | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_SD4_CLK__NAND_WE_B      | MUX_PAD_CTRL(NAND_PAD_CTRL),
++	MX6_PAD_NANDF_WP_B__NAND_WP_B   | MUX_PAD_CTRL(NAND_PAD_CTRL)
++};
++
++static void setup_gpmi_nand(void)
++{
++	imx_iomux_v3_setup_multiple_pads(nand_pads, ARRAY_SIZE(nand_pads));
++
++	setup_gpmi_io_clk(MXC_CCM_CS2CDR_ENFC_CLK_PODF(0) |
++			  MXC_CCM_CS2CDR_ENFC_CLK_PRED(3)   |
++			  MXC_CCM_CS2CDR_ENFC_CLK_SEL(3));
++}
++#endif /* CONFIG_NAND_MXS */
++
++#ifdef CONFIG_FEC_MXC
++
++#define ENET_100MBIT_PAD_CTRL  (PAD_CTL_PUS_100K_UP |		\
++	PAD_CTL_SPEED_LOW | PAD_CTL_DSE_120ohm | PAD_CTL_HYS |	\
++	PAD_CTL_PUE | PAD_CTL_PKE)
++
++static iomux_v3_cfg_t const fec1_pads[] = {
++	MX6_PAD_ENET_MDIO__ENET_MDIO | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_MDC__ENET_MDC | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_RXD0__ENET_RX_DATA0 | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_RXD1__ENET_RX_DATA1 | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_CRS_DV__ENET_RX_EN | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_RX_ER__ENET_RX_ER | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_TXD0__ENET_TX_DATA0 | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_TXD1__ENET_TX_DATA1 | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_ENET_TX_EN__ENET_TX_EN | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	MX6_PAD_RGMII_TX_CTL__ENET_REF_CLK | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++	/* fallback enet_ref_clk (see schematics) */
++	//MX6_PAD_GPIO_16__ENET_REF_CLK | MUX_PAD_CTRL(ENET_100MBIT_PAD_CTRL),
++
++	/* reset FIXME */
++	MX6_PAD_RGMII_RD0__GPIO6_IO25 | MUX_PAD_CTRL(0x88),
++};
++
++static void setup_iomux_fec(void)
++{
++	imx_iomux_v3_setup_multiple_pads(fec1_pads, ARRAY_SIZE(fec1_pads));
++}
++
++static int setup_fec(void)
++{
++	struct iomuxc *const iomuxc_regs = (struct iomuxc *)IOMUXC_BASE_ADDR;
++	int ret;
++
++        /* set div_select in CCM_ANALOG_PLL_ENETn to 50MHz and enable */
++	ret = enable_fec_anatop_clock(0, ENET_50MHZ);
++	if (ret)
++		return ret;
++
++	/* output enet_clk */
++	setbits_le32(&iomuxc_regs->gpr[1], IOMUXC_GPR1_ENET_CLK_SEL_MASK);
++
++	enable_enet_clk(1);
++
++	return 0;
++}
++
++int board_phy_config(struct phy_device *phydev)
++{
++	//phy_write(phydev, MDIO_DEVAD_NONE, 0x9, 0x1c00);
++	phy_write(phydev, MDIO_DEVAD_NONE, 0x1f, 0x8190);
++
++	if (phydev->drv->config)
++		phydev->drv->config(phydev);
++
++	return 0;
++}
++#endif /* CONFIG_FEC_MXC */
++
++int board_early_init_f(void)
++{
++	setup_iomux_uart();
++	setup_iomux_fec();
++
++	return 0;
++}
++
++int board_init(void)
++{
++	gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100;
++
++#ifdef CONFIG_NAND_MXS
++	setup_gpmi_nand();
++#endif
++
++#ifdef CONFIG_FEC_MXC
++	setup_fec();
++#endif
++
++	return 0;
++}
++
++int board_late_init(void)
++{
++	return 0;
++}
++
++int checkboard(void)
++{
++	puts("Board: Ginzinger BEP3 i.MX6 Solo\n");
++
++	return 0;
++}
+diff --git a/board/ginzinger/bep3/bep3.cfg b/board/ginzinger/bep3/bep3.cfg
+new file mode 100644
+index 0000000000..d9ebd8656f
+--- /dev/null
++++ b/board/ginzinger/bep3/bep3.cfg
+@@ -0,0 +1,120 @@
++/*
++ * created by ge_imx6_modul_create_ram_init_imx6s-V12
++ * (C) Copyright 2018
++ * Ginzinger electronic systems
++ *
++ * based on imximage.cfg
++ * (C) Copyright 2009
++ * Stefano Babic DENX Software Engineering sbabic@denx.de.
++ *
++ * SPDX-License-Identifier:     GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM       nand
++
++/*
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *      Addr-type register length (1,2 or 4 bytes)
++ *      Address   absolute address of the register
++ *      value     value to be stored in the register
++ */
++
++#include "asm/arch/mx6-ddr.h"
++
++DATA 4 MX6_IOM_GRP_DDR_TYPE, 0x000C0000
++DATA 4 MX6_IOM_GRP_DDRPKE, 0x00000000
++DATA 4 MX6_IOM_DRAM_SDCLK_0, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDCLK_1, 0x00000028
++DATA 4 MX6_IOM_DRAM_CAS, 0x00000028
++DATA 4 MX6_IOM_DRAM_RAS, 0x00000028
++DATA 4 MX6_IOM_GRP_ADDDS, 0x00000028
++DATA 4 MX6_IOM_DRAM_RESET, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDBA2, 0x00000000
++DATA 4 MX6_IOM_DRAM_SDODT0, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDODT1, 0x00000028
++DATA 4 MX6_IOM_GRP_CTLDS, 0x00000028
++DATA 4 MX6_IOM_DDRMODE_CTL, 0x00020000
++DATA 4 MX6_IOM_DRAM_SDQS0, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS1, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS2, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS3, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS4, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS5, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS6, 0x00000028
++DATA 4 MX6_IOM_DRAM_SDQS7, 0x00000028
++DATA 4 MX6_IOM_GRP_DDRMODE, 0x00020000
++DATA 4 MX6_IOM_GRP_B0DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B1DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B2DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B3DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B4DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B5DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B6DS, 0x00000030
++DATA 4 MX6_IOM_GRP_B7DS, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM0, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM1, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM2, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM3, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM4, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM5, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM6, 0x00000030
++DATA 4 MX6_IOM_DRAM_DQM7, 0x00000030
++DATA 4 MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4 MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4 MX6_MMDC_P0_MPWLDECTRL0, 0x0040003C
++DATA 4 MX6_MMDC_P0_MPWLDECTRL1, 0x0032003E
++DATA 4 MX6_MMDC_P1_MPWLDECTRL0, 0x0040003C
++DATA 4 MX6_MMDC_P1_MPWLDECTRL1, 0x0032003E
++DATA 4 MX6_MMDC_P0_MPDGCTRL0, 0x423E023B
++DATA 4 MX6_MMDC_P0_MPDGCTRL1, 0x02290229
++DATA 4 MX6_MMDC_P0_MPRDDLCTL, 0x47494A4A
++DATA 4 MX6_MMDC_P0_MPWRDLCTL, 0x35332D32
++DATA 4 MX6_MMDC_P0_MPRDDQBY0DL, 0x33333333
++DATA 4 MX6_MMDC_P0_MPRDDQBY1DL, 0x33333333
++DATA 4 MX6_MMDC_P0_MPRDDQBY2DL, 0x33333333
++DATA 4 MX6_MMDC_P0_MPRDDQBY3DL, 0x33333333
++DATA 4 MX6_MMDC_P1_MPRDDQBY0DL, 0x33333333
++DATA 4 MX6_MMDC_P1_MPRDDQBY1DL, 0x33333333
++DATA 4 MX6_MMDC_P1_MPRDDQBY2DL, 0x33333333
++DATA 4 MX6_MMDC_P1_MPRDDQBY3DL, 0x33333333
++DATA 4 MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4 MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4 MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4 MX6_MMDC_P0_MDOTC, 0x00333040
++DATA 4 MX6_MMDC_P0_MDCFG0, 0x40435323
++DATA 4 MX6_MMDC_P0_MDCFG1, 0xB66D8B63
++DATA 4 MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4 MX6_MMDC_P0_MDMISC, 0x00011740
++DATA 4 MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4 MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4 MX6_MMDC_P0_MDOR, 0x00431023
++DATA 4 MX6_MMDC_P0_MDASP, 0x00000017
++DATA 4 MX6_MMDC_P0_MDCTL, 0x83190000
++DATA 4 MX6_MMDC_P0_MDSCR, 0x02008032
++DATA 4 MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4 MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4 MX6_MMDC_P0_MDSCR, 0x15208030
++DATA 4 MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4 MX6_MMDC_P0_MDREF, 0x00007800
++DATA 4 MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4 MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4 MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4 MX6_MMDC_P0_MAPSR, 0x00011006
++DATA 4 MX6_MMDC_P0_MDSCR, 0x00000000
+diff --git a/configs/bep3_defconfig b/configs/bep3_defconfig
+new file mode 100644
+index 0000000000..eaea4ce95d
+--- /dev/null
++++ b/configs/bep3_defconfig
+@@ -0,0 +1,34 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_SYS_TEXT_BASE=0x17800000
++CONFIG_TARGET_BEP3=y
++CONFIG_NR_DRAM_BANKS=1
++# CONFIG_SYS_MALLOC_F is not set
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/ginzinger/bep3/bep3.cfg"
++CONFIG_CMD_ASKENV=y
++CONFIG_CMD_SHA1SUM=y
++CONFIG_SHA1SUM_VERIFY=y
++CONFIG_CMD_MTD=y
++CONFIG_CMD_NAND_TRIMFFS=y
++CONFIG_CMD_DHCP=y
++CONFIG_BOOTP_PREFER_SERVERIP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_HASH=y
++CONFIG_HASH_VERIFY=y
++CONFIG_CMD_MTDPARTS=y
++CONFIG_MTDIDS_DEFAULT="nand0=gpmi-nand"
++CONFIG_CMD_UBI=y
++# CONFIG_BLK is not set
++CONFIG_DM_MMC=y
++CONFIG_NAND=y
++CONFIG_NAND_MXS=y
++CONFIG_PHYLIB=y
++CONFIG_PHY_MICREL=y
++CONFIG_PHY_MICREL_KSZ90X1=y
++CONFIG_PHY_SMSC=y
++CONFIG_FEC_MXC=y
++CONFIG_MII=y
++CONFIG_CONS_INDEX=2
++CONFIG_MXC_UART=y
++CONFIG_SHA256=y
+diff --git a/include/configs/bep3.h b/include/configs/bep3.h
+new file mode 100644
+index 0000000000..5d57c3564c
+--- /dev/null
++++ b/include/configs/bep3.h
+@@ -0,0 +1,35 @@
++#ifndef __BEP3_CONFIG_H
++#define __BEP3_CONFIG_H
++
++#define CONFIG_MXC_UART_BASE		UART2_BASE
++
++#include "mx6_common.h"
++
++#define IMX_FEC_BASE			ENET_BASE_ADDR
++#define CONFIG_SYS_NAND_BASE		0x40000000
++#define CONFIG_SYS_NAND_ONFI_DETECTION
++#define PHYS_SDRAM_1			MMDC0_ARB_BASE_ADDR	/* 0x10000000 */
++#define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
++#define CONFIG_SYS_INIT_RAM_ADDR	IRAM_BASE_ADDR
++#define CONFIG_SYS_INIT_RAM_SIZE	IRAM_SIZE
++#define CONFIG_SYS_INIT_SP_OFFSET \
++	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
++
++#define CONFIG_ENV_OVERWRITE
++#define CONFIG_SYS_DEVICE_NULLDEV
++#define CONFIG_NET_RETRY_COUNT		20
++#define CONFIG_NET_MULTI
++#define CONFIG_ARP_TIMEOUT		200UL
++#define CONFIG_ENV_SIZE			0x1000
++#define CONFIG_SYS_MAX_FLASH_BANKS	1
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)	/* 10 MB */
++#define CONFIG_SYS_FSL_ESDHC_ADDR	0
++#define CONFIG_FEC_MXC_PHYADDR		0
++
++#define CONFIG_SYS_NAND_MASK_ALE	(1 << 21)
++#define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
++
++#endif /* __BEP3_CONFIG_H */
+-- 
+2.20.1
+
