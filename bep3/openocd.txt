@@ -1,0 +1,4 @@
+openocd -f openocd.cfg
+gdb
+target remote localhost:3333
+monitor help
