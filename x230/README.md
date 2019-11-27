@@ -1,3 +1,14 @@
+## ram rom images
+dump
+
+	cat bottom.rom top.rom > firmware.rom
+
+split
+
+	dd of=top.rom bs=1M if=build/coreboot.rom skip=8
+	dd of=bottom.rom bs=1M if=build/coreboot.rom count=8
+
+
 ## kernel and sys conf
 apply all this as it may be dependent on each other
 ### BFQ block scheduler
@@ -23,11 +34,6 @@ reads `med_power_with_dipm`
 * `BT_HCIBTUSB_AUTOSUSPEND`
 * `SND_HDA_POWER_SAVE_DEFAULT 1`
 
-
-## Heads setup
-* mount-usb (load usb drivers)
-* gpg --card-edit --homedir .gnupg/
-TODO
 
 ## X230 Lenovo BIOS keys
 
