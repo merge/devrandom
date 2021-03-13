@@ -1,3 +1,17 @@
+# Nextcloud client setup with Nextcloud server on onion service
+Manually add this to `~/.config/Nextcloud/nextcloud.cfg` because initially
+there's no option to for proxy setting in the GUI:
+
+
+		[Proxy]
+		host=localhost
+		needsAuth=false
+		pass=@ByteArray()
+		port=9050
+		type=1
+		user=
+
+
 # bits about tor relay configurations
 
 ## Offline master key
